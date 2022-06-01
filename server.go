@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -25,6 +26,8 @@ func (s *server) run() {
 			s.listRooms(cmd.client, cmd.args)
 		case CMD_QUIT:
 			s.quit(cmd.client, cmd.args)
+		case CMD_HELP:
+			s.help(cmd.client, cmd.args)
 		}
 	}
 }
@@ -47,13 +50,28 @@ func newServer() *server {
 }
 
 func (s *server) nick(c *client, args []string) {
-	c.nick = args[1]
+	name := args[1]
+	//Checking the input.
+	isValid := func(x string) bool {
+		return len(x) > 3 && x[0] == '@'
+	}(name)
+	if isValid {
+		c.nick = name
+	} else {
+		c.err(errors.New("The name you entered is not valid.\nMust start with @, and be at least 3 chars."))
+		return
+	}
 	c.msg(fmt.Sprintf("Gotcha, %s!", c.nick))
 }
 func (s *server) join(c *client, args []string) {
 	roomName := args[1]
+	if roomName[0] != '#' {
+		c.err(errors.New("Room name is not valid.\nMust start with #."))
+		return
+	}
 	r, ok := s.rooms[roomName]
 	if !ok {
+		c.msg("Creating room...")
 		r = &room{
 			name:    roomName,
 			members: make(map[net.Addr]*client),
@@ -70,9 +88,11 @@ func (s *server) join(c *client, args []string) {
 func (s *server) listRooms(c *client, args []string) {
 	var rooms []string
 	for name := range s.rooms {
-		rooms = append(rooms, name)
+		members := len(s.rooms[name].members) + 1
+		str := "name: " + name + " | online users: " + strconv.Itoa(members)
+		rooms = append(rooms, str)
 	}
-	c.msg(fmt.Sprintf("Rooms >> %s", strings.Join(rooms, ", ")))
+	c.msg(fmt.Sprintf("Rooms >> %s", strings.Join(rooms, "\n ")))
 }
 func (s *server) msg(c *client, args []string) {
 	if c.room == nil {
@@ -94,4 +114,8 @@ func (s *server) quitRoom(c *client) {
 		delete(c.room.members, c.conn.RemoteAddr())
 		c.room.broadcast(c, fmt.Sprintf("%s Has Left!", c.nick))
 	}
+}
+
+func (s *server) help(c *client, args []string) {
+	c.msg("Commands >> \n/nick -> set a nickname.\n/join -> join a room.\n/rooms -> list of all rooms.\n/msg -> send message to current room.\n/quit -> leave room and close app.\n/help -> print this.")
 }

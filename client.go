@@ -18,6 +18,7 @@ func (c *client) readInput() {
 	for {
 		msg, err := bufio.NewReader(c.conn).ReadString('\n')
 		if err != nil {
+			fmt.Println(err)
 			return
 		}
 		msg = strings.Trim(msg, "\r\n")
@@ -52,6 +53,12 @@ func (c *client) readInput() {
 		case "/quit":
 			c.commands <- command{
 				id:     CMD_QUIT,
+				client: c,
+				args:   args,
+			}
+		case "/help":
+			c.commands <- command{
+				id:     CMD_HELP,
 				client: c,
 				args:   args,
 			}

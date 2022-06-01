@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"os"
 )
 
 func check(err error) bool {
@@ -14,10 +15,16 @@ func check(err error) bool {
 }
 
 func main() {
+	var ip string
+	if len(os.Args) == 2 {
+		ip = os.Args[1]
+	} else {
+		panic("Make sure you put an IP to run the server on.")
+	}
 	s := newServer()
 	go s.run()
-
-	listener, err := net.Listen("tcp", "192.168.1.126:8888")
+	addr := ip + ":8888"
+	listener, err := net.Listen("tcp", addr)
 	if !check(err) {
 		panic("Error Creating Server.")
 	}
